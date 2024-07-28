@@ -1,12 +1,20 @@
 <?php
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+include "../inc/dbinfo.inc";
+
 // Start the session if it hasn't already been started
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
 // Create a new connection to the MySQL database
-$conn = new mysqli('localhost', 'root', '', 'vc_database');
+$conn = mysqli_connect(DB_SERVER, DB_USERNAME, DB_PASSWORD);
+
+$conn->query("USE vc_database");
 
 // Function to log out the user
 function logout_user()
@@ -18,15 +26,15 @@ function logout_user()
 
     // Display a success message and redirect to login.php
     alert('success', 'Logged out');
-    header("Location: login.php");
+    header("Location: index.php");
     die();
 }
 
 // Function to set an alert message in the session
 function alert($type, $message)
 {
-    $_SESSION['alert']['type'] = $type;
-    $_SESSION['alert']['message'] = $message;
+    $_SESSION['type'] = $type;
+    $_SESSION['message'] = $message;
 }
 
 // Function to check if a user is logged in
@@ -46,7 +54,7 @@ function login_user($email, $password)
     global $conn;
 
     // Query the database for the user with the given email
-    $sql = "SELECT * FROM users WHERE email = '{$email}'";
+    $sql = "SELECT * FROM users WHERE Email = '{$email}'";
     $res = $conn->query($sql);
 
     // If no user is found, set an alert and return false
@@ -59,7 +67,36 @@ function login_user($email, $password)
     $row = $res->fetch_assoc();
 
     // Verify the password and set an alert if incorrect
-    if (!password_verify($password, $row['password'])) {
+    if (!password_verify($password, $row['Password'])) {
+        alert("danger", "You entered wrong password");
+        return false;
+    }
+
+    // Set the 'user' session variable and set a success alert
+    $_SESSION['user'] = $row;
+    alert("success", "Logged in successfully");
+    return true;
+}
+
+function login_org($email, $password)
+{
+    global $conn;
+
+    // Query the database for the user with the given email
+    $sql = "SELECT * FROM organizations WHERE Email = '{$email}'";
+    $res = $conn->query($sql);
+
+    // If no user is found, set an alert and return false
+    if ($res->num_rows < 1) {
+        alert("danger", "Email does not exist");
+        return false;
+    }
+
+    // Fetch the user data
+    $row = $res->fetch_assoc();
+
+    // Verify the password and set an alert if incorrect
+    if (!password_verify($password, $row['Password'])) {
         alert("danger", "You entered wrong password");
         return false;
     }
